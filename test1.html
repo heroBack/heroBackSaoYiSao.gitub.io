@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>手机扫一扫</title>
+</head>
+<style type="text/css">
+*{
+  margin:0;
+  padding: 0
+}
+ html, body { height: 100%; width: 100%; text-align:center; } 
+ @-webkit-keyframes scanner {
+  0% {
+    bottom: 100%;
+  }
+  50% {
+    bottom: 0%;
+  }
+  100% {
+    bottom: 100%;
+  }
+}
+
+@-moz-keyframes scanner {
+  0% {
+    bottom: 100%;
+  }
+  50% {
+    bottom: 0%;
+  }
+  100% {
+    bottom: 100%;
+  }
+}
+
+@-o-keyframes scanner {
+  0% {
+    bottom: 100%;
+  }
+  50% {
+    bottom: 0%;
+  }
+  100% {
+    bottom: 100%;
+  }
+}
+
+@keyframes scanner {
+  0% {
+    bottom: 100%;
+  }
+  50% {
+    bottom: 0%;
+  }
+  100% {
+    bottom: 100%;
+  }
+}
+ #contentHolder {
+ }
+ .video,video,canvas{
+  width:320px;
+  height: 320px;
+  position: absolute;
+  left: 50%;
+  top:100px;
+  margin-left: -160px;
+    border-color: #ffffff;
+    border-width: 2px;
+    transition: all 200ms ease-in;
+    border-radius: 5px;
+    border: 2px solid #ccc;
+ }
+ 
+ .tiaoSao {
+  width: 100%;
+    height: 2px;
+    background: #4CAF50;
+    position: absolute;
+    -webkit-transition: all 200ms linear;
+    -moz-transition: all 200ms linear;
+    transition: all 200ms linear;
+    -webkit-animation: scanner 3s infinite linear;
+    -moz-animation: scanner 3s infinite linear;
+    -o-animation: scanner 3s infinite linear;
+    animation: scanner 3s infinite linear;
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.4);
+ }
+#snap {
+  position: absolute;
+  top: 440px;
+    margin-left: -60px;
+    left: 50%;
+  height:50px; 
+  width:120px;
+}
+</style>
+<body> 
+ <div id="contentHolder">
+    <div   class="video" >
+      <div class="tiaoSao"></div>
+    </div>
+    <video id="video" autoplay="" width="320" height="320" autoplay></video>
+    <canvas id="canvas" width="320" height="320"></canvas>      
+    <button id="snap" onclick="getMedia(1);">开始扫描</button> 
+  </div>
+  <div id='text_box'></div> 
+</body>
+<script src="jquery-1.9.1.js"></script>
+<script type="text/javascript" src="js/grid.js"></script>  
+<script type="text/javascript" src="js/version.js"></script>  
+<script type="text/javascript" src="js/detector.js"></script>  
+<script type="text/javascript" src="js/formatinf.js"></script>  
+<script type="text/javascript" src="js/errorlevel.js"></script>  
+<script type="text/javascript" src="js/bitmat.js"></script>  
+<script type="text/javascript" src="js/datablock.js"></script>  
+<script type="text/javascript" src="js/bmparser.js"></script>  
+<script type="text/javascript" src="js/datamask.js"></script>  
+<script type="text/javascript" src="js/rsdecoder.js"></script>  
+<script type="text/javascript" src="js/gf256poly.js"></script>  
+<script type="text/javascript" src="js/gf256.js"></script>  
+<script type="text/javascript" src="js/decoder.js"></script>  
+<script type="text/javascript" src="js/qrcode.js"></script>  
+<script type="text/javascript" src="js/findpat.js"></script>  
+<script type="text/javascript" src="js/alignpat.js"></script>  
+<script type="text/javascript" src="js/databr.js"></script>  
+<script>
+var count = 0; 
+var video = document.getElementById("video");
+var canvas = document.getElementById("canvas");
+var context = canvas.getContext("2d");
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+var exArray = []; //存储设备源ID
+MediaStreamTrack.getSources(function (sourceInfos) {
+	for (var i = 0; i != sourceInfos.length; ++i) {
+		var sourceInfo = sourceInfos[i];
+		//这里会遍历audio,video，所以要加以区分
+		if (sourceInfo.kind === 'video') {
+		exArray.push(sourceInfo.id);
+		}
+	}
+});
+function getMedia(a) {
+	if (navigator.getUserMedia) {
+		navigator.getUserMedia({
+		'video': {
+		'optional': [{
+		'sourceId': exArray[a] //0为前置摄像头，1为后置
+		}]
+	  },
+		'audio': true
+		}, successFunc, errorFunc); //success是获取成功的回调函数
+	}
+	else {
+		alert('Native device media streaming (getUserMedia) not supported in this browser.');
+	}
+}
+
+function successFunc(stream) {
+//alert('Succeed to get media!');
+	if (video.mozSrcObject !== undefined) {
+	//Firefox中，video.mozSrcObject最初为null，而不是未定义的，我们可以靠这个来检测Firefox的支持
+	video.mozSrcObject = stream;
+	}
+	else {
+	video.src = window.URL && window.URL.createObjectURL(stream) || stream;
+	}
+	startPat();
+}
+function errorFunc(e) {
+alert('Error！' + e);
+}
+function startPat(){
+
+	setInterval(function(){//防止调用过快
+
+		if(context)
+
+		{
+
+			context.drawImage(video, 0, 0, 320, 320);     
+
+			checkCode(); 
+
+		}
+
+	},200);
+
+};
+function checkCode(){  
+        canvas.getContext('2d').drawImage(video, 0, 0, 400, 400);  
+        qrcode.decode(canvas.toDataURL("image/png"));  
+        qrcode.callback = function(data){  
+            if(data == 'error decoding QR Code'){  
+                document.getElementById('text_box').innerText = '第' + count + '次:' + data;  
+                count ++;  
+            }else{  
+                video.removeEventListener('timeupdate', checkCode);  
+                alert(data); 
+                location.href=data;
+                //location.href = data;  
+            }  
+        }  
+}  
+
+//抓屏获取图像流，并上传到服务器      
+
+//function CatchCode() {        
+//
+//	if(canvas!=null)
+//
+//	{  
+//
+// 		//以下开始编 数据   
+//
+//		var imgData = canvas.toDataURL(); 
+//
+//		//将图像转换为base64数据
+//
+//      var base64Data = imgData;//.substr(22); //在前端截取22位之后的字符串作为图像数据
+//
+//      //开始异步上
+//      console.log(base64Data);
+//      
+//
+////	   $.post("saveimg.php", { "img": base64Data },function (result)
+////
+////	   {   
+////
+////			printHtml("解析结果："+result.data);
+////
+////			if (result.status == "success" && result.data!="")
+////
+////			{                 
+////
+////				printHtml("解析结果成功！");
+////
+////			}else{  
+////
+////				startPat();//如果没有解析出来则重新抓拍解析       
+////
+////			}
+////
+////	   },"json");
+////     setInterval(function () {  
+////          context.drawImage(video, 0, 0, canvas.width = video.videoWidth, canvas.height = video.videoHeight);  
+////          $.post('/Home/QRcodeDecode', { "img": canvas.toDataURL().substr(22) }, function (data, status) {  
+////              if (status == "success" && data != "no")location.href = "/Home/Result/" + data;                 
+////          }, "text");  
+////      }, 500);  
+//
+//
+//}
+//
+//}
+//function printHtml(content){
+//
+//	$(window.document.body).append(content+"<br/>");
+//
+//}
+
+</script>
+</html>
